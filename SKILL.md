@@ -1,6 +1,6 @@
 ---
 name: panel-composer
-version: 0.5.0
+version: 0.6.0
 description: 将多个 panel（PDF/PNG/JPG/TIFF/BMP）组合成一张大图，支持三种布局工作流
 description_zh: 将多个 panel（PDF/PNG/JPG/TIFF/BMP）组合成一张大图，支持自动/画布/对话三种布局工作流
 tags: [figure, panel, composite, layout, bioinformatics, image, pdf, workflow]
