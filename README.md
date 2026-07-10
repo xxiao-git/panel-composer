@@ -1,3 +1,5 @@
+[English](README_EN.md) | 中文
+
 # Panel Composer
 
 将多个 panel 组合成一张大图的通用工具。
@@ -21,7 +23,7 @@
 
 ### 📦 下载
 
-- **最新版（v0.5.0）**：[panel-composer-v0.5.0.zip](panel-composer-v0.5.0.zip)
+- **最新版（v0.6.0）**：[panel-composer-v0.6.0.zip](panel-composer-v0.6.0.zip)
 - 或前往 [Releases 页面](https://github.com/xxiao-git/panel-composer/releases) 查看历史版本
 
 ---
