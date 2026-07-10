@@ -6,6 +6,11 @@
 
 **全程无需写代码**——只需在对话中用自然语言描述，或在画布上拖拽，即可生成组合图。
 
+### 📦 下载
+
+- **最新版（v0.5.0）**：[panel-composer-v0.5.0.zip](panel-composer-v0.5.0.zip)
+- 或前往 [Releases 页面](https://github.com/xxiao-git/panel-composer/releases) 查看历史版本
+
 ---
 
 ## 目录
@@ -81,29 +86,33 @@ AI 会自动调用 panel-composer 技能，生成一张 2x2 网格的组合图�
 
 ### 完整流程演示
 
-下面用实际案例演示从"文件夹中的多个 PDF"到"一张组合大图"的完整流程。
+下面用实际案例演示从"一堆散落的 panel"到"一张组合大图"的完整流程。
 
 **第 1 步：你的文件**
 
-假设你有一个 `FigureProduction` 文件夹，里面按 Figure 分好了子文件夹：
+假设你有一个 `FigureProduction` 文件夹，里面按 Figure 分好了子文件夹，每个子文件夹里是独立的 panel：
 
 ![Figure 1-5 文件夹概览](docs/01-figure-folders-overview.png)
 
-**第 2 步：打开目标文件夹**
+**第 2 步：一句话批量组合**
 
-以 Figure 4 为例，里面有 6 张独立的 PDF 图（4A 到 4F）：
+不需要逐个文件夹操作，直接告诉 AI 要组合哪些：
 
-![Figure4 中的 6 个 PDF panel](docs/02-figure4-panels.png)
+> "帮我组合 FigureProduction 中 Figure1 到 Figure5 的所有图片"
 
-**第 3 步：对 AI 说一句话**
+AI 会一次性处理，自动生成 Figure1 ~ Figure5 五张组合大图。这就是 **批量处理** 的威力——你不需要手动打开每个文件夹、逐个组合，一句话搞定所有。
 
-在对话框中输入：
+**第 3 步：了解 panel 命名规则（以 Figure 4 为例）**
 
-> "帮我组合 Figure4 文件夹下的 6 张 PDF 图"
+每个 Figure 文件夹里的 panel 按字母命名（A、B、C、D...），这些字母最终会变成组合图上的标签：
 
-**第 4 步：拿到组合大图**
+![Figure4 中的 6 个 PDF panel（4A 到 4F）](docs/02-figure4-panels.png)
 
-AI 自动生成 2x3 网格布局，加上 A-F 标签：
+> **注意**：这一步只是为了让你了解 panel 是怎么命名的。实际使用中你不需要手动打开文件夹，AI 会自动识别。
+
+**第 4 步：自动布局效果**
+
+以 Figure 4 为例，6 个 panel 自动生成 2x3 网格布局，加上 A-F 标签：
 
 ![自动布局效果](docs/04-output-result.png)
 
@@ -116,6 +125,8 @@ AI 自动生成 2x3 网格布局，加上 A-F 标签：
 AI 重新排列成 3x2 布局：
 
 ![对话调整后的效果](docs/05-dialogue-adjust-layout.png)
+
+就这么简单。整个流程你只需要说话，不需要写代码，不需要手动操作文件。
 
 ---
 
@@ -141,14 +152,23 @@ AI 会根据 panel 数量自动选择最接近正方形的网格（如 4 个 →
 
 **适用场景**：需要精确控制每个 panel 的位置和大小，但不想使用专业软件或写代码。
 
-**流程**：
+**流程演示**：
 
-1. 让 AI 打开画布："打开 panel-composer 画布"
-2. 在画布上拖拽画矩形，定义每个 panel 的位置和大小
-3. 每个矩形自动标记为 A、B、C、D...
-4. 可以拖动调整位置、拉动边角调整大小、按 Delete 删除
-5. 画完后点击"复制 JSON"
-6. 把 JSON 发给 AI，AI 立即生成组合图
+1. 在对话中说"用 html 方式调整"，AI 自动打开画布：
+
+![对话触发画布](docs/06-html-canvas-instruction.png)
+
+2. 画布界面：左侧设置页面尺寸/标签样式/操作模式，右侧是网格画布。
+
+![画布界面](docs/07-html-canvas-interface.png)
+
+3. 切换到"画框模式"（快捷键 `D`），在画布上拖拽画矩形，每个矩形自动标记为 A、B、C...
+
+![拖拽后的布局](docs/08-html-canvas-dragged.png)
+
+4. 画完后点击"复制 JSON"，把 JSON 发给 AI，AI 立即按你的布局生成组合图：
+
+![画布布局输出效果](docs/09-html-canvas-output.png)
 
 **放心拖拽**：无论你在画布上拖出什么比例的框，panel 内容始终保持原始宽高比，不会被拉伸变形。如果框的比例和原图不一致，原图会在框内等比缩放居中，多余空间留白。你只需要关心位置和大致大小。
 
