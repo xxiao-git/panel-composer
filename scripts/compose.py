@@ -156,6 +156,7 @@ def compose_figure(
     grid_panels=None,
     custom_panels=None,
     json_layout=None,
+    rasterize=None,
 ):
     """
     将多个 PDF/图片 panel 组合成一张大图。
@@ -196,6 +197,11 @@ def compose_figure(
          "panels": [{"label": "A", "x": 50, "y": 400, "width": 200, "height": 150}, ...]}
         传入后 panels 列表按顺序对应 JSON 中的 panel 定义。
         layout / rows / cols 等参数会被忽略。
+    rasterize : bool | list[int] | None
+        控制 PDF 输出时是否渲染为位图（仅影响 PDF 输出，PNG 输出总是位图）。
+        - None 或 False（默认）：所有 PDF 保持矢量（推荐，可无损放大）
+        - True：所有 PDF 渲染为位图（600 DPI，适合元素特别多的图）
+        - [0, 2, 5]：只渲染指定索引的 PDF 为位图，其他保持矢量
     """
     output_path = Path(output)
     is_png = output_path.suffix.lower() == ".png"
@@ -271,27 +277,82 @@ def compose_figure(
 
     # ── 输出 PDF ──
     if not is_png:
-        c = rl_canvas.Canvas(str(output_path), pagesize=(page_w, page_h))
-        for x, y, w, h, label, file_path in entries:
+        # 解析 rasterize 参数
+        if rasterize is True:
+            rasterize_set = set(range(len(entries)))  # 全部光栅化
+        elif rasterize is False or rasterize is None:
+            rasterize_set = set()  # 全部矢量
+        elif isinstance(rasterize, (list, tuple, set)):
+            rasterize_set = set(rasterize)  # 指定索引光栅化
+        else:
+            raise ValueError(f"rasterize 参数类型错误: {type(rasterize)}，应为 bool 或 list[int]")
+
+        from pypdf import PdfReader, PdfWriter, Transformation
+        
+        writer = PdfWriter()
+        
+        # 创建空白页面
+        blank_page = writer.add_blank_page(width=page_w, height=page_h)
+        
+        # 用 reportlab 生成标签 overlay
+        if any(e[4] for e in entries):  # 有标签
+            label_pdf_fd, label_pdf_path = tempfile.mkstemp(suffix=".pdf")
+            os.close(label_pdf_fd)
+            c_label = rl_canvas.Canvas(label_pdf_path, pagesize=(page_w, page_h))
+            for x, y, w, h, label, file_path in entries:
+                if label:
+                    c_label.setFont("Helvetica-Bold", label_font_size)
+                    c_label.setFillColor("black")
+                    c_label.drawString(x + label_offset[0], y + h - label_offset[1], label)
+            c_label.save()
+            
+            # 合并标签 overlay
+            label_reader = PdfReader(label_pdf_path)
+            blank_page.merge_page(label_reader.pages[0])
+            os.unlink(label_pdf_path)
+        
+        # 合并每个 panel PDF
+        for idx, (x, y, w, h, label, file_path) in enumerate(entries):
             orig_w, orig_h = get_panel_dims(file_path)
             scale = min(w / orig_w, h / orig_h)
             rw, rh = orig_w * scale, orig_h * scale
             ox = x + (w - rw) / 2
             oy = y + (h - rh) / 2
 
-            # 渲染为 PIL Image 再写入 PDF
-            img = panel_to_pil(file_path, rw, rh, dpi=600)
-            tmp_fd, tmp_path = tempfile.mkstemp(suffix=".png")
-            os.close(tmp_fd)
-            img.save(tmp_path, dpi=(600, 600))
-            c.drawImage(tmp_path, ox, oy, width=rw, height=rh)
-            os.unlink(tmp_path)
-
-            if label:
-                c.setFont("Helvetica-Bold", label_font_size)
-                c.setFillColor("black")
-                c.drawString(x + label_offset[0], y + h - label_offset[1], label)
-        c.save()
+            if is_pdf(file_path) and idx not in rasterize_set:
+                # PDF 矢量模式：直接合并页面，保持矢量
+                reader = PdfReader(file_path)
+                panel_page = reader.pages[0]
+                
+                # 缩放 panel
+                panel_page.add_transformation(Transformation().scale(scale, scale))
+                # 平移到目标位置
+                panel_page.add_transformation(Transformation().translate(ox, oy))
+                
+                # 合并到空白页
+                blank_page.merge_page(panel_page)
+            else:
+                # 位图模式：渲染为 PIL Image 后写入
+                img = panel_to_pil(file_path, rw, rh, dpi=600)
+                tmp_fd, tmp_path = tempfile.mkstemp(suffix=".png")
+                os.close(tmp_fd)
+                img.save(tmp_path, dpi=(600, 600))
+                
+                # 用 reportlab 创建包含图片的临时 PDF
+                img_pdf_fd, img_pdf_path = tempfile.mkstemp(suffix=".pdf")
+                os.close(img_pdf_fd)
+                c_img = rl_canvas.Canvas(img_pdf_path, pagesize=(page_w, page_h))
+                c_img.drawImage(tmp_path, ox, oy, width=rw, height=rh)
+                c_img.save()
+                os.unlink(tmp_path)
+                
+                # 合并图片 PDF
+                img_reader = PdfReader(img_pdf_path)
+                blank_page.merge_page(img_reader.pages[0])
+                os.unlink(img_pdf_path)
+        
+        writer.write(str(output_path))
+        writer.close()
 
     # ── 输出 PNG ──
     else:

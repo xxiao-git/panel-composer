@@ -1,11 +1,12 @@
 ---
 name: panel-composer
-version: 0.4.0
+version: 0.5.0
 description: 将多个 panel（PDF/PNG/JPG/TIFF/BMP）组合成一张大图，支持三种布局工作流
 description_zh: 将多个 panel（PDF/PNG/JPG/TIFF/BMP）组合成一张大图，支持自动/画布/对话三种布局工作流
 tags: [figure, panel, composite, layout, bioinformatics, image, pdf, workflow]
 author: WorkBuddy
 created: 2026-07-08
+updated: 2026-07-10
 ---
 
 # Panel Composer
@@ -140,6 +141,13 @@ AI 会解析描述，转换为 `custom` 布局的 dict 列表，直接调用 `co
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `background_color` | str | `"white"` | 背景色（PNG 输出时生效） |
+| `rasterize` | bool\|list | False | PDF 矢量化控制：`False`（默认，全部矢量）/ `True`（全部位图）/ `[0, 2]`（指定索引的 panel 转位图） |
+
+**关于 `rasterize` 参数**：
+- 默认所有 PDF panel 保持矢量（推荐，可无损放大编辑）
+- 如果某个子图元素特别多（热图、散点图），可指定该 panel 转位图以减小文件大小
+- 示例：`rasterize=[2]` 表示将第 3 个 panel（索引从 0 开始）转为位图
+- 用户说"把热图转成位图"或"C 子图元素太多，转位图"时，识别对应 panel 索引并传参
 
 ---
 
