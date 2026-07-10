@@ -105,7 +105,7 @@ AI 会自动调用 panel-composer 技能，生成一张 2x2 网格的组合图�
 
 假设你有一个 `FigureProduction` 文件夹，里面按 Figure 分好了子文件夹，每个子文件夹里是独立的 panel：
 
-![Figure 1-5 文件夹概览](docs/01-figure-folders-overview.png)
+<img src="docs/01-figure-folders-overview.png" width="340" alt="Figure 1-5 文件夹概览">
 
 **第 2 步：一句话批量组合**
 
@@ -119,7 +119,7 @@ AI 会一次性处理，自动生成 Figure1 ~ Figure5 五张组合大图。这�
 
 每个 Figure 文件夹里的 panel 按字母命名（A、B、C、D...），这些字母最终会变成组合图上的标签：
 
-![Figure4 中的 6 个 PDF panel（4A 到 4F）](docs/02-figure4-panels.png)
+<img src="docs/02-figure4-panels.png" width="410" alt="Figure4 中的 6 个 PDF panel（4A 到 4F）">
 
 > **注意**：这一步只是为了让你了解 panel 是怎么命名的。实际使用中你不需要手动打开文件夹，AI 会自动识别。
 
@@ -127,7 +127,7 @@ AI 会一次性处理，自动生成 Figure1 ~ Figure5 五张组合大图。这�
 
 以 Figure 4 为例，6 个 panel 自动生成 2x3 网格布局，加上 A-F 标签：
 
-![自动布局效果](docs/04-output-result.png)
+<img src="docs/04-output-result.png" width="486" alt="自动布局效果">
 
 **第 5 步：对话微调（可选）**
 
@@ -137,7 +137,7 @@ AI 会一次性处理，自动生成 Figure1 ~ Figure5 五张组合大图。这�
 
 AI 重新排列成 3x2 布局：
 
-![对话调整后的效果](docs/05-dialogue-adjust-layout.png)
+<img src="docs/05-dialogue-adjust-layout.png" width="340" alt="对话调整后的效果">
 
 就这么简单。整个流程你只需要说话，不需要写代码，不需要手动操作文件。
 
@@ -169,19 +169,19 @@ AI 会根据 panel 数量自动选择最接近正方形的网格（如 4 个 →
 
 1. 在对话中说"用 html 方式调整"，AI 自动打开画布：
 
-![对话触发画布](docs/06-html-canvas-instruction.png)
+<img src="docs/06-html-canvas-instruction.png" width="480" alt="对话触发画布">
 
 2. 画布界面：左侧设置页面尺寸/标签样式/操作模式，右侧是网格画布。
 
-![画布界面](docs/07-html-canvas-interface.png)
+<img src="docs/07-html-canvas-interface.png" width="480" alt="画布界面">
 
 3. 切换到"画框模式"（快捷键 `D`），在画布上拖拽画矩形，每个矩形自动标记为 A、B、C...
 
-![拖拽后的布局](docs/08-html-canvas-dragged.png)
+<img src="docs/08-html-canvas-dragged.png" width="490" alt="拖拽后的布局">
 
 4. 画完后点击"复制 JSON"，把 JSON 发给 AI，AI 立即按你的布局生成组合图：
 
-![画布布局输出效果](docs/09-html-canvas-output.png)
+<img src="docs/09-html-canvas-output.png" width="460" alt="画布布局输出效果">
 
 **放心拖拽**：无论你在画布上拖出什么比例的框，panel 内容始终保持原始宽高比，不会被拉伸变形。如果框的比例和原图不一致，原图会在框内等比缩放居中，多余空间留白。你只需要关心位置和大致大小。
 
