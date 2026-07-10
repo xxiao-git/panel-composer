@@ -294,23 +294,6 @@ def compose_figure(
         # 创建空白页面
         blank_page = writer.add_blank_page(width=page_w, height=page_h)
         
-        # 用 reportlab 生成标签 overlay
-        if any(e[4] for e in entries):  # 有标签
-            label_pdf_fd, label_pdf_path = tempfile.mkstemp(suffix=".pdf")
-            os.close(label_pdf_fd)
-            c_label = rl_canvas.Canvas(label_pdf_path, pagesize=(page_w, page_h))
-            for x, y, w, h, label, file_path in entries:
-                if label:
-                    c_label.setFont("Helvetica-Bold", label_font_size)
-                    c_label.setFillColor("black")
-                    c_label.drawString(x + label_offset[0], y + h - label_offset[1], label)
-            c_label.save()
-            
-            # 合并标签 overlay
-            label_reader = PdfReader(label_pdf_path)
-            blank_page.merge_page(label_reader.pages[0])
-            os.unlink(label_pdf_path)
-        
         # 合并每个 panel PDF
         for idx, (x, y, w, h, label, file_path) in enumerate(entries):
             orig_w, orig_h = get_panel_dims(file_path)
@@ -350,6 +333,21 @@ def compose_figure(
                 img_reader = PdfReader(img_pdf_path)
                 blank_page.merge_page(img_reader.pages[0])
                 os.unlink(img_pdf_path)
+        
+        # 标签 overlay 放在最后，确保不被 panel 覆盖
+        if any(e[4] for e in entries):
+            label_pdf_fd, label_pdf_path = tempfile.mkstemp(suffix=".pdf")
+            os.close(label_pdf_fd)
+            c_label = rl_canvas.Canvas(label_pdf_path, pagesize=(page_w, page_h))
+            for x, y, w, h, label, file_path in entries:
+                if label:
+                    c_label.setFont("Helvetica-Bold", label_font_size)
+                    c_label.setFillColor("black")
+                    c_label.drawString(x + label_offset[0], y + h - label_offset[1], label)
+            c_label.save()
+            label_reader = PdfReader(label_pdf_path)
+            blank_page.merge_page(label_reader.pages[0])
+            os.unlink(label_pdf_path)
         
         writer.write(str(output_path))
         writer.close()
