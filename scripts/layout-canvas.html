@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Panel Composer - Layout Canvas</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; display: flex; height: 100vh; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 260px; background: #1a1a2e; color: #e0e0e0; padding: 20px;
+    display: flex; flex-direction: column; gap: 16px; overflow-y: auto;
+  }
+  .sidebar h2 { font-size: 16px; color: #fff; border-bottom: 1px solid #333; padding-bottom: 8px; }
+  .sidebar label { font-size: 12px; color: #aaa; display: block; margin-bottom: 4px; }
+  .sidebar select, .sidebar input[type="number"], .sidebar input[type="text"] {
+    width: 100%; padding: 6px 8px; border: 1px solid #444; border-radius: 4px;
+    background: #16213e; color: #fff; font-size: 13px;
+  }
+  .sidebar .row { display: flex; gap: 8px; }
+  .sidebar .row > div { flex: 1; }
+  .sidebar button {
+    padding: 8px 12px; border: none; border-radius: 6px; font-size: 13px;
+    cursor: pointer; font-weight: 600; transition: background 0.2s;
+  }
+  .btn-primary { background: #4361ee; color: #fff; }
+  .btn-primary:hover { background: #3a56d4; }
+  .btn-success { background: #2ec4b6; color: #fff; }
+  .btn-success:hover { background: #28b0a3; }
+  .btn-danger { background: #e63946; color: #fff; }
+  .btn-danger:hover { background: #d32f3c; }
+  .btn-outline { background: transparent; color: #aaa; border: 1px solid #555; }
+  .btn-outline:hover { background: #16213e; color: #fff; }
+  .hint { font-size: 11px; color: #888; line-height: 1.5; }
+  .panel-list { list-style: none; max-height: 200px; overflow-y: auto; }
+  .panel-list li {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 8px; margin: 2px 0; background: #16213e; border-radius: 4px; font-size: 12px;
+  }
+  .panel-list li .label-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; background: #4361ee;
+    color: #fff; font-weight: 700; font-size: 11px;
+  }
+  .panel-list li .del-btn {
+    background: none; border: none; color: #e63946; cursor: pointer; font-size: 14px; padding: 2px 4px;
+  }
+  .panel-list li .del-btn:hover { color: #ff6b6b; }
+  .divider { border-top: 1px solid #333; }
+  #jsonOutput {
+    width: 100%; height: 120px; background: #0f0f23; color: #7fdbca; border: 1px solid #333;
+    border-radius: 4px; padding: 8px; font-family: monospace; font-size: 11px; resize: vertical;
+  }
+
+  /* ── Canvas Area ── */
+  .canvas-area {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 30px; overflow: auto;
+  }
+  .page-canvas {
+    position: relative; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    cursor: crosshair;
+  }
+  .page-canvas .grid-overlay {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(to right, #f0f0f0 1px, transparent 1px),
+      linear-gradient(to bottom, #f0f0f0 1px, transparent 1px);
+    background-size: 50px 50px;
+    opacity: 0.5;
+  }
+
+  /* ── Panel boxes on canvas ── */
+  .panel-box {
+    position: absolute; border: 2px solid #4361ee; background: rgba(67,97,238,0.08);
+    cursor: move; user-select: none; min-width: 30px; min-height: 30px;
+  }
+  .panel-box:hover { border-color: #f72585; background: rgba(247,37,133,0.06); }
+  .panel-box.selected { border-color: #f72585; background: rgba(247,37,133,0.12); }
+  .panel-box .panel-label {
+    position: absolute; top: -12px; left: -12px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #4361ee; color: #fff; font-weight: 700; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .panel-box.selected .panel-label { background: #f72585; }
+  .panel-box .resize-handle {
+    position: absolute; bottom: -5px; right: -5px; width: 10px; height: 10px;
+    background: #4361ee; border-radius: 2px; cursor: nwse-resize;
+  }
+  .panel-box.selected .resize-handle { background: #f72585; }
+  .panel-box .dim-info {
+    position: absolute; bottom: -20px; left: 0; font-size: 10px; color: #888; white-space: nowrap;
+  }
+
+  /* ── Draw preview ── */
+  .draw-preview {
+    position: absolute; border: 2px dashed #f72585; background: rgba(247,37,133,0.05);
+    pointer-events: none; display: none;
+  }
+
+  /* ── Mode indicator ── */
+  .mode-badge {
+    position: fixed; top: 10px; right: 10px; padding: 6px 14px;
+    border-radius: 20px; font-size: 12px; font-weight: 600; z-index: 100;
+  }
+  .mode-draw { background: #4361ee; color: #fff; }
+  .mode-select { background: #2ec4b6; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>Panel Composer</h2>
+
+  <div>
+    <label>页面尺寸</label>
+    <select id="pageSize">
+      <option value="a4" selected>A4 (595 × 842 pt)</option>
+      <option value="letter">Letter (612 × 792 pt)</option>
+      <option value="a3">A3 (842 × 1191 pt)</option>
+    </select>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>外边距 (pt)</label>
+      <input type="number" id="margin" value="36" min="0" max="200">
+    </div>
+    <div>
+      <label>标签样式</label>
+      <select id="labelStyle">
+        <option value="uppercase" selected>A B C D</option>
+        <option value="lowercase">a b c d</option>
+        <option value="numeric">1 2 3 4</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <label>操作模式</label>
+    <div style="display:flex;gap:6px;margin-top:4px;">
+      <button class="btn-primary" id="btnDrawMode" style="flex:1">✏️ 画框</button>
+      <button class="btn-outline" id="btnSelectMode" style="flex:1">👆 选择</button>
+    </div>
+    <p class="hint" style="margin-top:6px">画框模式：在画布上拖拽画矩形<br>选择模式：拖动/调整已有面板</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <label>面板列表</label>
+    <ul class="panel-list" id="panelList"></ul>
+    <button class="btn-danger" id="btnClearAll" style="width:100%;margin-top:6px;">清空全部</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <label>导出 JSON（可直接发给 AI）</label>
+    <textarea id="jsonOutput" readonly></textarea>
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <button class="btn-success" id="btnExport" style="flex:1">📋 复制 JSON</button>
+      <button class="btn-outline" id="btnDownload" style="flex:1">💾 下载 .json</button>
+    </div>
+  </div>
+</div>
+
+<div class="canvas-area">
+  <div class="page-canvas" id="pageCanvas">
+    <div class="grid-overlay"></div>
+    <div class="draw-preview" id="drawPreview"></div>
+  </div>
+</div>
+
+<div class="mode-badge mode-draw" id="modeBadge">✏️ 画框模式</div>
+
+<script>
+// ── 页面尺寸 (pt) ──
+const PAGE_SIZES = {
+  a4: { w: 595.28, h: 841.89 },
+  letter: { w: 612, h: 792 },
+  a3: { w: 841.89, h: 1190.55 },
+};
+
+const SCALE = 0.85; // px per pt
+let currentSize = 'a4';
+let panels = []; // { id, x, y, w, h } in pt
+let mode = 'draw'; // 'draw' | 'select'
+let selectedId = null;
+let nextId = 1;
+
+// ── DOM refs ──
+const pageCanvas = document.getElementById('pageCanvas');
+const drawPreview = document.getElementById('drawPreview');
+const panelList = document.getElementById('panelList');
+const jsonOutput = document.getElementById('jsonOutput');
+const modeBadge = document.getElementById('modeBadge');
+
+// ── Init canvas ──
+function initCanvas() {
+  const sz = PAGE_SIZES[currentSize];
+  pageCanvas.style.width = (sz.w * SCALE) + 'px';
+  pageCanvas.style.height = (sz.h * SCALE) + 'px';
+}
+initCanvas();
+
+// ── Page size change ──
+document.getElementById('pageSize').addEventListener('change', (e) => {
+  currentSize = e.target.value;
+  initCanvas();
+  renderPanels();
+});
+
+// ── Mode switch ──
+function setMode(m) {
+  mode = m;
+  const btnDraw = document.getElementById('btnDrawMode');
+  const btnSel = document.getElementById('btnSelectMode');
+  if (m === 'draw') {
+    btnDraw.className = 'btn-primary';
+    btnSel.className = 'btn-outline';
+    modeBadge.className = 'mode-badge mode-draw';
+    modeBadge.textContent = '✏️ 画框模式';
+    pageCanvas.style.cursor = 'crosshair';
+  } else {
+    btnDraw.className = 'btn-outline';
+    btnSel.className = 'btn-primary';
+    modeBadge.className = 'mode-badge mode-select';
+    modeBadge.textContent = '👆 选择模式';
+    pageCanvas.style.cursor = 'default';
+  }
+  selectedId = null;
+  renderPanels();
+}
+document.getElementById('btnDrawMode').addEventListener('click', () => setMode('draw'));
+document.getElementById('btnSelectMode').addEventListener('click', () => setMode('select'));
+
+// ── Drawing ──
+let drawing = false;
+let drawStart = { x: 0, y: 0 };
+
+pageCanvas.addEventListener('mousedown', (e) => {
+  if (mode !== 'draw' || e.target !== pageCanvas && !e.target.classList.contains('grid-overlay')) return;
+  const rect = pageCanvas.getBoundingClientRect();
+  drawStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  drawing = true;
+  drawPreview.style.display = 'block';
+  drawPreview.style.left = drawStart.x + 'px';
+  drawPreview.style.top = drawStart.y + 'px';
+  drawPreview.style.width = '0px';
+  drawPreview.style.height = '0px';
+});
+
+pageCanvas.addEventListener('mousemove', (e) => {
+  if (!drawing) return;
+  const rect = pageCanvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const x = Math.min(drawStart.x, cx);
+  const y = Math.min(drawStart.y, cy);
+  const w = Math.abs(cx - drawStart.x);
+  const h = Math.abs(cy - drawStart.y);
+  drawPreview.style.left = x + 'px';
+  drawPreview.style.top = y + 'px';
+  drawPreview.style.width = w + 'px';
+  drawPreview.style.height = h + 'px';
+});
+
+document.addEventListener('mouseup', (e) => {
+  if (!drawing) return;
+  drawing = false;
+  drawPreview.style.display = 'none';
+  const rect = pageCanvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  const px = Math.min(drawStart.x, cx) / SCALE;
+  const py = Math.min(drawStart.y, cy) / SCALE;
+  const pw = Math.abs(cx - drawStart.x) / SCALE;
+  const ph = Math.abs(cy - drawStart.y) / SCALE;
+  if (pw > 10 && ph > 10) { // min 10pt
+    const sz = PAGE_SIZES[currentSize];
+    // Convert to PDF coords (y from bottom)
+    panels.push({
+      id: nextId++,
+      x: Math.round(px * 10) / 10,
+      y: Math.round((sz.h - py - ph) * 10) / 10, // PDF y from bottom
+      width: Math.round(pw * 10) / 10,
+      height: Math.round(ph * 10) / 10,
+    });
+    renderPanels();
+  }
+});
+
+// ── Drag & resize in select mode ──
+let dragState = null;
+
+pageCanvas.addEventListener('mousedown', (e) => {
+  if (mode !== 'select') return;
+  const box = e.target.closest('.panel-box');
+  if (!box) { selectedId = null; renderPanels(); return; }
+  const id = parseInt(box.dataset.id);
+  selectedId = id;
+
+  const panel = panels.find(p => p.id === id);
+  if (!panel) return;
+
+  const rect = pageCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const sz = PAGE_SIZES[currentSize];
+
+  // Convert panel pt to canvas px
+  const pxX = panel.x * SCALE;
+  const pxY = (sz.h - panel.y - panel.height) * SCALE;
+  const pxW = panel.width * SCALE;
+  const pxH = panel.height * SCALE;
+
+  // Check if resize handle
+  const handleRect = box.querySelector('.resize-handle').getBoundingClientRect();
+  if (e.clientX >= handleRect.left && e.clientX <= handleRect.right &&
+      e.clientY >= handleRect.top && e.clientY <= handleRect.bottom) {
+    dragState = { type: 'resize', id, startX: mx, startY: my, origW: panel.width, origH: panel.height };
+  } else {
+    dragState = { type: 'move', id, startX: mx, startY: my, origX: panel.x, origY: panel.y };
+  }
+  renderPanels();
+  e.stopPropagation();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragState) return;
+  const rect = pageCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const dx = (mx - dragState.startX) / SCALE;
+  const dy = (my - dragState.startY) / SCALE;
+  const panel = panels.find(p => p.id === dragState.id);
+  if (!panel) return;
+
+  if (dragState.type === 'move') {
+    panel.x = Math.round((dragState.origX + dx) * 10) / 10;
+    panel.y = Math.round((dragState.origY - dy) * 10) / 10; // reverse y
+  } else if (dragState.type === 'resize') {
+    panel.width = Math.max(20, Math.round((dragState.origW + dx) * 10) / 10);
+    panel.height = Math.max(20, Math.round((dragState.origH - dy) * 10) / 10);
+  }
+  renderPanels();
+});
+
+document.addEventListener('mouseup', () => { dragState = null; });
+
+// ── Render ──
+function renderPanels() {
+  // Remove old boxes
+  pageCanvas.querySelectorAll('.panel-box').forEach(el => el.remove());
+  const sz = PAGE_SIZES[currentSize];
+  const labelStyle = document.getElementById('labelStyle').value;
+
+  panels.forEach((p, i) => {
+    let label;
+    if (labelStyle === 'uppercase') label = String.fromCharCode(65 + i);
+    else if (labelStyle === 'lowercase') label = String.fromCharCode(97 + i);
+    else label = String(i + 1);
+
+    const pxX = p.x * SCALE;
+    const pxY = (sz.h - p.y - p.height) * SCALE;
+    const pxW = p.width * SCALE;
+    const pxH = p.height * SCALE;
+
+    const box = document.createElement('div');
+    box.className = 'panel-box' + (p.id === selectedId ? ' selected' : '');
+    box.dataset.id = p.id;
+    box.style.left = pxX + 'px';
+    box.style.top = pxY + 'px';
+    box.style.width = pxW + 'px';
+    box.style.height = pxH + 'px';
+    box.innerHTML = `
+      <div class="panel-label">${label}</div>
+      <div class="resize-handle"></div>
+      <div class="dim-info">${Math.round(p.w || p.width)}×${Math.round(p.h || p.height)} pt</div>
+    `;
+    pageCanvas.appendChild(box);
+  });
+
+  renderPanelList();
+  renderJSON();
+}
+
+function renderPanelList() {
+  const labelStyle = document.getElementById('labelStyle').value;
+  panelList.innerHTML = '';
+  panels.forEach((p, i) => {
+    let label;
+    if (labelStyle === 'uppercase') label = String.fromCharCode(65 + i);
+    else if (labelStyle === 'lowercase') label = String.fromCharCode(97 + i);
+    else label = String(i + 1);
+
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span><span class="label-badge">${label}</span> &nbsp; ${Math.round(p.width)}×${Math.round(p.height)} pt</span>
+      <button class="del-btn" data-id="${p.id}">✕</button>
+    `;
+    panelList.appendChild(li);
+  });
+
+  // Delete buttons
+  panelList.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id);
+      panels = panels.filter(p => p.id !== id);
+      selectedId = null;
+      renderPanels();
+    });
+  });
+}
+
+function renderJSON() {
+  const labelStyle = document.getElementById('labelStyle').value;
+  const margin = parseInt(document.getElementById('margin').value) || 36;
+  const layout = panels.map((p, i) => {
+    let label;
+    if (labelStyle === 'uppercase') label = String.fromCharCode(65 + i);
+    else if (labelStyle === 'lowercase') label = String.fromCharCode(97 + i);
+    else label = String(i + 1);
+    return {
+      label: label,
+      x: Math.round(p.x * 10) / 10,
+      y: Math.round(p.y * 10) / 10,
+      width: Math.round(p.width * 10) / 10,
+      height: Math.round(p.height * 10) / 10,
+    };
+  });
+
+  const output = {
+    page_size: currentSize,
+    margin: margin,
+    panels: layout,
+  };
+  jsonOutput.value = JSON.stringify(output, null, 2);
+}
+
+// ── Label style change ──
+document.getElementById('labelStyle').addEventListener('change', renderPanels);
+
+// ── Margin change ──
+document.getElementById('margin').addEventListener('input', renderJSON);
+
+// ── Clear all ──
+document.getElementById('btnClearAll').addEventListener('click', () => {
+  if (panels.length === 0) return;
+  if (confirm('确定清空所有面板？')) {
+    panels = [];
+    selectedId = null;
+    nextId = 1;
+    renderPanels();
+  }
+});
+
+// ── Export ──
+document.getElementById('btnExport').addEventListener('click', () => {
+  navigator.clipboard.writeText(jsonOutput.value).then(() => {
+    const btn = document.getElementById('btnExport');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制 JSON', 1500);
+  });
+});
+
+document.getElementById('btnDownload').addEventListener('click', () => {
+  const blob = new Blob([jsonOutput.value], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'layout.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedId && mode === 'select') {
+      panels = panels.filter(p => p.id !== selectedId);
+      selectedId = null;
+      renderPanels();
+    }
+  }
+  if (e.key === 'Escape') {
+    selectedId = null;
+    setMode('draw');
+  }
+  if (e.key === 'd' && !e.ctrlKey && !e.metaKey) setMode('draw');
+  if (e.key === 's' && !e.ctrlKey && !e.metaKey) setMode('select');
+});
+</script>
+</body>
+</html>
